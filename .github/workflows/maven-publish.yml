@@ -1,0 +1,43 @@
+# Nome del workflow
+name: Create Release and Publish Package
+
+# Si attiva solo alla creazione di una nuova release su GitHub
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-publish:
+    # Sistema operativo del runner
+    runs-on: ubuntu-latest
+
+    # Permessi necessari per clonare la repo privata e pubblicare il pacchetto
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1. Clona il codice del repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configura l'ambiente con Java 21 (come richiesto dal pom.xml)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          # Questo ID è la chiave per l'autenticazione. Deve corrispondere a quello nel pom.xml
+          server-id: github
+
+      # 3. Compila il progetto, specificando il percorso del pom.xml
+      - name: Build with Maven
+        run: mvn -B package --file ./adventure/pom.xml
+
+      # 4. Pubblica il pacchetto su GitHub Packages
+      - name: Publish to GitHub Packages
+        run: mvn deploy --file ./adventure/pom.xml
+        env:
+          # Usa il token automatico, che ha i permessi per pubblicare
+          # nel package registry dell'organizzazione
+          GITHUB_TOKEN: ${{ github.token }}
